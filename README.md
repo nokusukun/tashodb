@@ -20,7 +20,7 @@ Tables can be called through `tasho.Database.get_table(table_name)` or through `
 <TashoDBTable>: Anime | Chunks: 1
 ```
 
-*** Note: Tables are set to auto commit by default. When doing bulk inserts, make sure to set `Table.auto_commit` to `False` and running `Table.commit()` manually afterwards.***
+***Note:  Tables are set to auto commit by default. When doing bulk inserts, make sure to set `Table.auto_commit` to `False` and running `Table.commit()` manually afterwards.***
 
 
 #### Data Storage
