@@ -8,12 +8,12 @@ To initalize or open a database, it's as straightforward as calling `tasho.Datab
 ```python
 >>> import tasho
 >>> database = tasho.Database.new("AnimeDatabase")  # Creates a new database.
->>> database = tasho.Database.open("AnimeDatabase") # Opens a new database.
+>>> database = tasho.Database.open("AnimeDatabase") # Opens a database.
 ```
 
 Tables can be called through `tasho.Database.get_table(table_name)` or through `tasho.Database.table.table_name` 
 ```python
->>> tbl_anime = database.table.Anime 			# These all returns 
+>>> tbl_anime = database.table.Anime 			# These all return 
 >>> tbl_anime = database.get_table("Anime")		# the same Table
 >>> tbl_anime = database.table['Anime']			# object.
 >>> tbl_anime

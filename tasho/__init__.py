@@ -231,6 +231,17 @@ class Table():
             return self.active_chunk.name
 
 
+    def new_document(self, key, value):
+        """
+        Table.new_document(String/Int:key, Dict:value) returns Document
+
+        Works the same way as Table.insert, but returns 
+        a Document object instead.
+        """
+        self.insert(key, value)
+        return self.get(key)
+
+
     def delete(self, key):
         """
         Table.delete(String/Int:key) returns Bool
