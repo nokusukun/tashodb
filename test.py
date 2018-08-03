@@ -1,11 +1,11 @@
-import kodb
+import tasho
 import secrets
 try:
-	database = kodb.KoDB.new("testTable")
+	database = tasho.Database.new("testTable")
 except:
-	database = kodb.KoDB.open("testTable")
+	database = tasho.Database.open("testTable")
 
-table = database.get_table("default")
+table = database.table.Default
 table.auto_commit = False
 
 for i in range(0, 50000):

@@ -5,7 +5,7 @@ import secrets
 from . import exceptions as _except
 from . import polyfill
 
-class Database():
+class Database(): 
     """Database.new(String:database_file, **options) returns tasho.database.Database
 
             Creates a new database object, a folder will be created
@@ -340,7 +340,14 @@ class Document():
     def __setattr__(self, attribute, data):
         if attribute in self._data:
             self._data[attribute] = data
-            
+
+    def __getitem__(self, attribute):
+        return self._data[attribute]
+    
+    def __setitem__(self, attribute, data):
+        self._data[attribute] = data   
+
+
     def save(self):
         """
         Document.save()
@@ -423,6 +430,7 @@ class Chunk():
     def delete(self, key):
         if key in self._data:
             self._data.pop(key)
+            self.dirty = True
             return True
         return False
 
