@@ -5,6 +5,8 @@ import secrets
 from . import exceptions as _except
 from . import polyfill
 
+import atexit
+
 class Database(): 
     """Database.new(String:database_file, **options) returns tasho.database.Database
 
@@ -75,6 +77,7 @@ class Database():
         self._table_index = self._load_internal(options['table_index'])
         self._database = {}
         self._tables = {}
+        self.commit_on_exit = True
         for table_i, chunks in self._table_index.items():
             self._tables[table_i] = Table(table_i, 
                                           directory, 
@@ -83,9 +86,28 @@ class Database():
                                           self._options.get('chunk_size'), 
                                           self)
 
+        atexit.register(self._atexit_cleanup)
+
+    def __repr__(self):
+        return "<tasho.database: {}>".format(self.directory)
+
+    def _atexit_cleanup(self):
+        if self.commit_on_exit:
+            dirties = []
+            for table in self._tables.values():
+                dirties.extend(table.dirty)
+
+            for chunk in dirties:
+                print(f"Commiting {chunk}")
+                chunk.commit()
+
     @property
     def table(self):
         return TableSelector(self)
+
+    @property
+    def tables(self):
+        return self._tables
 
     def get_table(self, table_name):
         """
@@ -171,7 +193,7 @@ class Table():
                     Chunk(c_id, chunk_path, self.chunk_size))
 
     def __repr__(self):
-        return "{is_dropped}<TashoDBTable>: {name} | Chunks: {chunkcount}".format(
+        return "{is_dropped}<TashoDBTable:{name} Chunks: {chunkcount}>".format(
                     name=self.name,
                     chunkcount=len(self.chunks),
                     is_dropped='DROPPED' if self.__is_dropped else '')
@@ -212,6 +234,16 @@ class Table():
                 yield item
 
 
+    def bulk_insert(self, data):
+        c_auto_commit = self.auto_commit
+        self.auto_commit = False 
+        for _id, value in data.items():
+            self.insert(_id, value)
+
+        self.commit()
+        self.auto_commit = c_auto_commit
+
+
     def insert(self, key, value):
         """
         Table.insert(String/Int:key, Dict:value) returns String
@@ -220,6 +252,9 @@ class Table():
         set to true, then the whole table gets commited to disk.
         Returns the chunk name.
         """
+        if key == AutoGenerateId:
+            key = polyfill.hex_token(8)
+
         chunk = self.get_chunk(key)
         if chunk:
             chunk.write(key, value, self.auto_commit)
@@ -267,6 +302,7 @@ class Table():
                 return chunk.items[key]
         return None
 
+
     def get(self, key):
         """
         Table.get(String/Int:key) returns tasho.database.Document
@@ -274,9 +310,11 @@ class Table():
         Retrieves and returns a Document object.
         """
         for chunk in self.chunks:
-            if key in chunk.items:
-                return Document((key, chunk.items[key]), self)
+            nugger = chunk.items.get(key, None)
+            if nugger:
+                return Document((key, nugger), self)
         return None
+
 
     def query(self, query):
         """
@@ -336,7 +374,7 @@ class Document():
         super(Document, self).__setattr__('_table', table)
 
     def __repr__(self):
-        return "<TashoDBDocument:{}> Origin: {}".format(self._id, self._table.name)
+        return "<TashoDBDocument:{} Origin: {}>".format(self._id, self._table.name)
 
     @property
     def dict(self):
@@ -407,13 +445,18 @@ class Chunk():
         self.max_size = max_size
         self.is_loaded = False
         self._data = {}
+        self.idhash = None
         self.dirty = False
 
     def __repr__(self):
-        return "<TashoDBTableChunk>: " + self.name
+        return "<TashoDBTableChunk:" + self.name + ">"
 
     def initalize(self):
-        pass
+        if os.path.exists(self.chunk_path):
+            with open(self.chunk_path, "rb") as f:
+                self._data = marshal.load(f)
+                self.idhash = set(self._data.keys())
+                self.is_loaded = True
 
     @property
     def is_full(self):
@@ -424,12 +467,18 @@ class Chunk():
 
     @property
     def items(self):
-        if not self._data and os.path.exists(self.chunk_path):
-            with open(self.chunk_path, "rb") as f:
-                self._data = marshal.load(f)
-                self.is_loaded = True
-
+        if not self._data:
+            self.initalize()
         return self._data
+
+    def index_in_chunk(self, index, data):
+        if not self.is_loaded:
+            self.initalize()
+
+        if _id in self.idhash:
+            return self._data[_id]
+        else:
+            return None
 
     def write(self, key, value, commit=False):
         self._data[key] = value
@@ -449,3 +498,7 @@ class Chunk():
         with open(self.chunk_path, "wb") as f:
             marshal.dump(self._data, f)
         self.dirty = False
+
+
+class AutoGenerateId():
+    pass
