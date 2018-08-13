@@ -29,7 +29,7 @@ Tables can be called through `tasho.Database.get_table(table_name)` or through `
 'Shows-d545998bc3485346'
 ```
 
-This stores the data with `001` as the Document ID document IDs can either be String or Int. Since `Table.auto_commit` has been set to true, running `Table.commit()` is no longer needed.
+This stores the data with `001` as the Document ID. Document IDs can either be String or Int. Since `Table.auto_commit` has been set to true, running `Table.commit()` is no longer needed.
 
 
 #### Retrieval
