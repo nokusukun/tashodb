@@ -1,6 +1,8 @@
 import marshal
+#import json as marshal
 import os
 import secrets
+import glob
 
 from . import exceptions as _except
 from . import polyfill
@@ -28,7 +30,8 @@ class Database():
             
             Internaly used by Database, please use Database.new or Database.open respectively."""
 
-    def new(directory, **options):
+    @classmethod
+    def new(Database, directory, **options):
         if os.path.exists(directory):
             err = "Database '{}' already exists. Drop the database first.".format(directory)
             raise _except.DatabaseInitException(err)
@@ -49,11 +52,14 @@ class Database():
 
         return Database(directory, **properties)
 
-
-    def open(directory):
+    @classmethod
+    def open(Database, directory, append=True, **options):
         if not os.path.exists(directory):
-            err = "Database '{}' does not exist.".format(directory)
-            raise _except.DatabaseInitException(err)
+            if append:
+                return Database.new(directory, **options)
+            else:
+                err = "Database '{}' does not exist.".format(directory)
+                raise _except.DatabaseInitException(err)
 
         with open(os.path.join(directory, 'properties'), "rb") as f:
             properties = marshal.load(f)
@@ -137,7 +143,6 @@ class Database():
         self.commit_table_index()
         return table
 
-
     def drop_table(self, table_name, drop_key):
         """
         Database.drop_table(String:table_name, String:drop_key)
@@ -187,16 +192,42 @@ class Table():
         self.auto_commit = True
         self.db = db
         self.__is_dropped = False
+        self.indexes = {}
+
         for c_id in chunk_ids:
             chunk_path = os.path.join(self.path, c_id)
             self.chunks.append(
                     Chunk(c_id, chunk_path, self.chunk_size))
+
+
 
     def __repr__(self):
         return "{is_dropped}<TashoDBTable:{name} Chunks: {chunkcount}>".format(
                     name=self.name,
                     chunkcount=len(self.chunks),
                     is_dropped='DROPPED' if self.__is_dropped else '')
+
+
+    def initalize_index(self):
+        for index in glob.glob(os.path.join(self.path, "{}-*.index".format(self.name))):
+            with open(index, "rb") as f:
+                self.indexes.update(marshal.loads(f.read()))
+
+    def create_index(self, field):
+        index = {}
+        for chunk in self.chunks:
+            for id, document in chunk.items.items():
+                field_data = document.get(field, None)
+                if field_data:
+                    if index.get(field_data):
+                        index[field_data].append([chunk.name, id])
+                    else:
+                        index[field_data] = [[chunk.name, id]]
+        
+        with open(os.path.join(self.path, "{}-{}.index".format(self.name, field)), "wb") as f:
+            f.write(marshal.dumps({field: index}))
+
+        self.indexes.update({field: index})
 
     @property
     def active_chunk(self):
@@ -258,12 +289,12 @@ class Table():
         chunk = self.get_chunk(key)
         if chunk:
             chunk.write(key, value, self.auto_commit)
-            return chunk.name
         else:
             if self.active_chunk.is_full:
                 self._new_chunk()
             self.active_chunk.write(key, value, self.auto_commit)
-            return self.active_chunk.name
+        
+        return self.get(key)
 
 
     def new_document(self, key, value):
@@ -316,6 +347,10 @@ class Table():
         return None
 
 
+    def get_indexed(self, index, query):
+        return [[self.get(id) for id in ids[0]] for x, ids in self.indexes[index].items() if x == query]
+
+
     def query(self, query):
         """
         Table.query(function(id, document)) returns List[tasho.database.Document]
@@ -357,6 +392,12 @@ class Table():
                 return chunk
         return None
 
+    def get_chunk_from_name(self, name):
+        for chunk in self.chunks:
+            if name == chunk.name:
+                return chunk
+        return None
+
     def _new_chunk(self):
         chunk_name = self.name + "-" +  polyfill.hex_token(8)
         chunk_path = os.path.join(self.path, chunk_name)
@@ -364,6 +405,7 @@ class Table():
         chunk.initalize()
         self.chunks.append(chunk)
         return chunk_name
+
 
 
 class Document():
