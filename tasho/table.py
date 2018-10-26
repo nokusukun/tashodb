@@ -82,7 +82,7 @@ class Table():
     def items(self):
         """
         Table.items() returns (String/int:id, Dict:document)
-        Returns a generator going through all of the items in the table.
+        Returns a generator going through all of the items in the table. 
         """
         for i in range(len(self.chunks) -1, -1, -1):
             for item in self.chunks[i].items.items():
