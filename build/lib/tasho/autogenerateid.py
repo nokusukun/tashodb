@@ -1,0 +1,2 @@
+class AutoGenerateId():
+    pass

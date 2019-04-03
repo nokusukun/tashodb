@@ -1,0 +1,15 @@
+README.md
+setup.py
+tasho/__init__.py
+tasho/autogenerateid.py
+tasho/chunk.py
+tasho/console.py
+tasho/document.py
+tasho/exceptions.py
+tasho/polyfill.py
+tasho/query_engine.py
+tasho/table.py
+tasho.egg-info/PKG-INFO
+tasho.egg-info/SOURCES.txt
+tasho.egg-info/dependency_links.txt
+tasho.egg-info/top_level.txt
