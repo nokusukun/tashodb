@@ -1,10 +1,20 @@
-import os
+import os, multiprocessing, dill
+import glob, marshal
 
 from . import polyfill
 from .autogenerateid import AutoGenerateId
 
 from .document import Document
 from .chunk import Chunk
+
+def find(data):
+    items, qcode = data
+    query = dill.loads(qcode)
+    results = []
+    for i in items:
+        if query(i[0], i[1]):
+            results.append(i)
+    return results
 
 class Table():
 
@@ -32,7 +42,7 @@ class Table():
                     is_dropped='DROPPED' if self.__is_dropped else '')
 
 
-    def initalize_index(self):
+    def initialize_index(self):
         for index in glob.glob(os.path.join(self.path, "{}-*.index".format(self.name))):
             with open(index, "rb") as f:
                 self.indexes.update(marshal.loads(f.read()))
@@ -44,9 +54,9 @@ class Table():
                 field_data = document.get(field, None)
                 if field_data:
                     if index.get(field_data):
-                        index[field_data].append([chunk.name, id])
+                        index[field_data].append((chunk.name, id))
                     else:
-                        index[field_data] = [[chunk.name, id]]
+                        index[field_data] = [(chunk.name, id)]
         
         with open(os.path.join(self.path, "{}-{}.index".format(self.name, field)), "wb") as f:
             f.write(marshal.dumps({field: index}))
@@ -90,6 +100,11 @@ class Table():
 
 
     def bulk_insert(self, data):
+        """
+        Table.bulk_insert(Dict{id:data}) returns None
+
+        Insert, but in bulk.
+        """ 
         c_auto_commit = self.auto_commit
         self.auto_commit = False 
         for _id, value in data.items():
@@ -116,6 +131,7 @@ class Table():
         else:
             if self.active_chunk.is_full:
                 self._new_chunk()
+                self.commit()
             self.active_chunk.write(key, value, self.auto_commit)
         
         return self.get(key)
@@ -165,14 +181,14 @@ class Table():
         Retrieves and returns a Document object.
         """
         for chunk in self.chunks:
-            nugger = chunk.items.get(key, None)
-            if nugger:
-                return Document((key, nugger), self)
+            nugget = chunk.items.get(key, None)
+            if nugget:
+                return Document((key, nugget), self)
         return None
 
 
     def get_indexed(self, index, query):
-        return [[self.get(id) for id in ids[0]] for x, ids in self.indexes[index].items() if x == query]
+        return [[self.get(id) for id in ids[0]] for x, ids in self.indexes[index].items() if query(id, x)]
 
 
     def query(self, query):
@@ -196,6 +212,21 @@ class Table():
             if query(data[0], data[1]):
                 return Document(data, self)
 
+
+    def _hyper_query(self, query):
+        """
+        Experimental Function, several magnitudes slower atm.
+        """
+        qcode = dill.dumps(query)
+        result = []
+        with multiprocessing.Pool(processes=5) as pool:
+            result = pool.map(find, [
+                    (list(chunk.items.items()), qcode) for chunk in self.chunks
+                ]
+            )
+        return result
+
+
     def commit(self):
         """
         Table.commit()
@@ -203,7 +234,9 @@ class Table():
         Writes all of the unsaved changes to the disk.
         """
         for chunk in self.dirty:
-            chunk.commit()
+           chunk.commit()
+        # for chunk in [chunk for chunk in self.chunks if chunk.dirty]:
+        #     chunk.commit()
 
         if self.db:
             self.db.commit_table_index()
