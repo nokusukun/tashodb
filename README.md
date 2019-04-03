@@ -12,6 +12,7 @@ To initalize or open a database, it's as straightforward as calling `tasho.Datab
 ```python
 >>> import tasho
 >>> database = tasho.Database.new("AnimeDatabase")  # Creates a new database.
+>>> database = tasho.Database.new("AnimeDatabase", open_instead=True)  # Creates a new database or opens if it already exists.
 >>> database = tasho.Database.open("AnimeDatabase") # Opens a database.
 ```
 
@@ -31,9 +32,11 @@ Tables can be called through `tasho.Database.get_table(table_name)` or through `
 ```python
 >>> tbl_anime.insert('001', {'title': 'Nichijou', 'episodes': 24, 'rating': 99})
 'Shows-d545998bc3485346'
+>>> tbl_anime.insert(tasho.AutoGenerateId, {'title': 'Nichijou', 'episodes': 24, 'rating': 99})
+'Shows-485399846d545bc3'
 ```
 
-This stores the data with `001` as the Document ID. Document IDs can either be String or Int. Since `Table.auto_commit` has been set to true, running `Table.commit()` is no longer needed.
+This stores the data with `001` as the Document ID. Document IDs can either be String or Int or you can specify `tasho.AutoGenerateId` to let the database generate an ID. Since `Table.auto_commit` has been set to true, running `Table.commit()` is no longer needed.
 
 
 #### Retrieval
