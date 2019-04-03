@@ -1,5 +1,4 @@
 import marshal
-#import json as marshal
 import os
 import secrets
 import glob
@@ -14,6 +13,9 @@ from .autogenerateid import AutoGenerateId
 from .console import Console
 
 import atexit
+
+name = "tasho"
+
 
 class Database(): 
     """Database.new(String:database_file, **options) returns tasho.database.Database

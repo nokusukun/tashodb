@@ -1,4 +1,4 @@
-import os, multiprocessing, dill
+import os, multiprocessing
 import glob, marshal
 
 from . import polyfill
@@ -7,14 +7,6 @@ from .autogenerateid import AutoGenerateId
 from .document import Document
 from .chunk import Chunk
 
-def find(data):
-    items, qcode = data
-    query = dill.loads(qcode)
-    results = []
-    for i in items:
-        if query(i[0], i[1]):
-            results.append(i)
-    return results
 
 class Table():
 
@@ -211,20 +203,6 @@ class Table():
         for data in self.items():
             if query(data[0], data[1]):
                 return Document(data, self)
-
-
-    def _hyper_query(self, query):
-        """
-        Experimental Function, several magnitudes slower atm.
-        """
-        qcode = dill.dumps(query)
-        result = []
-        with multiprocessing.Pool(processes=5) as pool:
-            result = pool.map(find, [
-                    (list(chunk.items.items()), qcode) for chunk in self.chunks
-                ]
-            )
-        return result
 
 
     def commit(self):
