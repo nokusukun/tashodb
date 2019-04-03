@@ -1,6 +1,10 @@
 # TashoDB 
 
 A fast and portable python NoSQL database. Sucessor to KoDB.
+```
+> pip install tasho
+```
+
 
 #### Using the DB
 
