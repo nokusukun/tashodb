@@ -11,6 +11,7 @@ from .table import Table
 from .document import Document
 from .chunk import Chunk
 from .autogenerateid import AutoGenerateId
+from .console import Console
 
 import atexit
 
@@ -37,7 +38,10 @@ class Database():
 
     @classmethod
     def new(Database, directory, **options):
+        open_instead = options.get('open_instead', False)
         if os.path.exists(directory):
+            if open_instead:
+                return Database.open(directory, **options)
             err = "Database '{}' already exists. Drop the database first.".format(directory)
             raise _except.DatabaseInitException(err)
 
@@ -111,6 +115,11 @@ class Database():
             for chunk in dirties:
                 print(f"Commiting {chunk}")
                 chunk.commit()
+            
+            Console.log('Waiting for commits to finish.')
+            for chunk in dirties:
+                chunk.commitQueue.join()
+
 
     @property
     def table(self):
@@ -162,7 +171,7 @@ class Database():
                 for chunk in chunks:
                     os.remove(os.path.join(self._directory, chunk))
             else:
-                raise DatabaseOperationException("Wrong drop key.")
+                raise _except.DatabaseOperationException("Wrong drop key.")
 
 
     def commit_table_index(self):
