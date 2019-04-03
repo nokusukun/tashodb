@@ -25,7 +25,7 @@ Tables can be called through `tasho.Database.get_table(table_name)` or through `
 <TashoDBTable>: Anime | Chunks: 1
 ```
 
-***Note:  Tables are set to auto commit by default. When doing bulk inserts, make sure to set `Table.auto_commit` to `False` and running `Table.commit()` manually afterwards.***
+~~***Note:  Tables are set to auto commit by default. When doing bulk inserts, make sure to set `Table.auto_commit` to `False` and running `Table.commit()` manually afterwards.***~~ You can now do bulk inserts through `Table.bulk_insert`.
 
 
 #### Data Storage
@@ -34,6 +34,14 @@ Tables can be called through `tasho.Database.get_table(table_name)` or through `
 'Shows-d545998bc3485346'
 >>> tbl_anime.insert(tasho.AutoGenerateId, {'title': 'Nichijou', 'episodes': 24, 'rating': 99})
 'Shows-485399846d545bc3'
+>>> tbl_anime.bulk_insert(
+    {
+        001: {'title': 'Nichijou', 'episodes': 24, 'rating': 99},
+        002: {'title': 'Danshi Koukousei Wa Nichijou', 'episodes': 24, 'rating': 80},
+    }
+)
+True
+>>>
 ```
 
 This stores the data with `001` as the Document ID. Document IDs can either be String or Int or you can specify `tasho.AutoGenerateId` to let the database generate an ID. Since `Table.auto_commit` has been set to true, running `Table.commit()` is no longer needed.
